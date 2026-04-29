@@ -58,4 +58,4 @@ GitHub repository. DOI: (to be added)
 ```
 ## Contact
 
-For questions or issues, you can email to: mehdinasrollahzade.j@gmail.com.
+For questions or issues, please email: mehdinasrollahzade.j@gmail.com.

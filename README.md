@@ -27,11 +27,6 @@ The code is written in Python and requires the following packages:
 * scipy
 * matplotlib
 
-Install dependencies with:
-
-```
-pip install -r requirements.txt
-```
 
 ## Usage
 

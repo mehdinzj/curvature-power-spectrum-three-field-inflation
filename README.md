@@ -43,14 +43,9 @@ python main.py
 
 Additional scripts and modules can be found in the repository for specific tasks such as background evolution and perturbation analysis.
 
-## Reproducibility
+%## Citation
 
-All results in the accompanying paper can be reproduced using the code in this repository.
-A specific version of the code used in the paper will be archived and assigned a DOI via Zenodo.
-
-## Citation
-
-If you use this code in your research, please cite:
+%If you use this code in your research, please cite:
 
 ```
 Author Name (Year). Curvature Power Spectrum in Three-Field Inflation. 

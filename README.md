@@ -35,22 +35,12 @@ pip install -r requirements.txt
 
 ## Usage
 
-Run the main script to perform the full computation:
+Set your model (parameters, potential, initial conditions) and then run the main script to perform the full computation:
 
 ```
 python main.py
 ```
 
-Additional scripts and modules can be found in the repository for specific tasks such as background evolution and perturbation analysis.
-
-%## Citation
-
-%If you use this code in your research, please cite:
-
-```
-Author Name (Year). Curvature Power Spectrum in Three-Field Inflation. 
-GitHub repository. DOI: (to be added)
-```
 ## Contact
 
 For questions or issues, please email: mehdinasrollahzade.j@gmail.com.

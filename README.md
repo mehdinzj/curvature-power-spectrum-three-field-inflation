@@ -1,4 +1,4 @@
-# Curvature Power Spectrum in Three-Field Inflation
+# Code for calculating the curvature power spectrum in three-field inflation
 
 This repository contains a Python implementation for computing the background dynamics and perturbation evolution in three-field inflationary models, with a focus on the resulting curvature power spectrum.
 

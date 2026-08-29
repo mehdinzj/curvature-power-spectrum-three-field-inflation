@@ -33,7 +33,7 @@ The code is written in Python and requires the following packages:
 Set your model (parameters, potential, initial conditions) and then run the main script to perform the full computation:
 
 ```
-python main.py
+python 3Field_PowerSpectrum.py
 ```
 
 ## Contact

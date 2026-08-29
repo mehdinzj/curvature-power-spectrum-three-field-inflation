@@ -2,7 +2,10 @@ import numpy as np
 from scipy.integrate import solve_ivp
 import matplotlib.pyplot as plt
 from matplotlib.ticker import ScalarFormatter
-# constants:
+
+
+# ===============================================================
+# constants and parameters:
 
 V0 = 18.1e-10
 Mp = 1
@@ -15,18 +18,25 @@ p0 = 0
 mp = 2.435515 * 1e18
 mpc = (6.394970897 * 1e-39) / mp   # Mpc^{-1} =  2.63 * 1e-57 Mp (arXiv: 2110.12251)
 k0 = 0.05 * mpc
+
+# ===============================================================
+
 def power(a,b):     # a ^ b
     s = 1
     for i in range(b):
         s *= a
     return s
+
+# ===============================================================
+
 # potential V(phi,chi,psi):
+# Note: input your own potential here!
 
 def V(phi,chi,psi):
     return V0 * power(phi,2) / (power(phi0,2) + power(phi,2)) + 0.5 * power(mchi,2) * power(chi,2) + 0.5 * power(mpsi,2) * power(psi,2)
 
-# derivates of the potential:
-
+# derivates of the potential: 
+# Note: for any arbitrary potential these functions compute its derivatives numerically
 
 def V_phi(phi,chi,psi):
    h = 1e-5
@@ -63,7 +73,12 @@ def V_phipsi(phi,chi,psi):
 def V_chipsi(phi,chi,psi):
    h = 1e-5
    return (V_chi(phi,chi,psi + h) - V_chi(phi,chi,psi - h)) / (2 * h)
+
+
+# ===============================================================
+
 # noncanonical coefficients:
+# Note: the default is linear dependence, you can change it manually.
 
 def b(phi):
     return b0 * phi
@@ -95,8 +110,17 @@ def y_phiphi(phi):
 def p_chichi(chi):
     h = 1e-5
     return (p_chi(chi + h) - p_chi(chi - h)) / (2 * h)
+
+
+# ===============================================================
+
 def G_ab(phi,chi):     # field-space metric
     return np.array([[1,0,0],[0, np.exp(2 * b(phi)) ,0],[0,0, np.exp(2 * y(phi) + 2 * p(chi))]])
+
+
+# ===============================================================
+# Hubble, Hubble's derivative and first slow-roll parameter functions in order to numerical usage
+
 def H(phi,chi,psi,dphi_dN,dchi_dN,dpsi_dN):
     G = G_ab(phi,chi)
     value = np.sqrt((2 * V(phi,chi,psi)) / (6 * power(Mp,2) - G[0][0] * power(dphi_dN,2) - G[1][1] * power(dchi_dN ,2) - G[2][2] * power(dpsi_dN ,2)))
@@ -112,6 +136,10 @@ def numeps(phi,chi,psi,dphi_dN,dchi_dN,dpsi_dN):
     Hub = H(phi,chi,psi,dphi_dN,dchi_dN,dpsi_dN)
     dH = dH_dN(phi,chi,psi,dphi_dN,dchi_dN,dpsi_dN)
     return - dH / Hub
+
+
+# ===============================================================
+
 # Background equations of motion:
 
 def background(N,y):
@@ -123,7 +151,12 @@ def background(N,y):
     d2chi_dN2 = -(3 + 2 * b_phi(phi) * dphi_dN - eps) * dchi_dN + p_chi(chi) * (G[2][2] / G[1][1]) * power(dpsi_dN,2) - (1 / G[1][1]) * V_chi(phi,chi,psi) / power(H_val,2)
     d2psi_dN2 = -(3 + 2 * b_phi(phi) * dphi_dN + 2 * p_chi(chi) * dchi_dN - eps) * dpsi_dN - (1 / G[2][2]) * V_psi(phi,chi,psi) / power(H_val,2)
     return np.array([dphi_dN, d2phi_dN2, dchi_dN, d2chi_dN2, dpsi_dN, d2psi_dN2])
+
+
+# ===============================================================
+
 # Initial condition + Integration:
+# Note: if your model has not any specific initial velocity, you can use slow-roll inc (uncomment them!)
 
 phi_i = 7
 chi_i = 7.31
@@ -133,12 +166,15 @@ chi_dot_i = 0#- V_chi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
 psi_dot_i = 0#- V_psi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
 Inc = np.array([phi_i, phi_dot_i, chi_i, chi_dot_i, psi_i, psi_dot_i])
  
+
+# ===============================================================
+# Solving background system
+
 sample_size = 10000 # to pass the stiffness
 NEnd = 99.81 # estimated end for inflation
 
 NE = np.linspace(0 , NEnd, sample_size)
-sol_background = solve_ivp(background, [0 , NEnd], Inc,t_eval=NE,
-                          method='LSODA', rtol=1e-6, atol=1e-8)
+sol_background = solve_ivp(background, [0 , NEnd], Inc,t_eval=NE, method='RK45', rtol=1e-6, atol=1e-8)
 N_vals = sol_background.t
 phi_vals = sol_background.y[0]
 dphidN = sol_background.y[1]
@@ -150,13 +186,20 @@ dpsidN = sol_background.y[5]
 Hubble_vals = [H(phi_vals[i],chi_vals[i],psi_vals[i],dphidN[i],dchidN[i],dpsidN[i]) for i in range(len(N_vals))]
 epsilon = np.array([-(1 / H(phi_vals[i],chi_vals[i],psi_vals[i],dphidN[i],dchidN[i],dpsidN[i])) * dH_dN(phi_vals[i],chi_vals[i],psi_vals[i],dphidN[i],dchidN[i],dpsidN[i]) for i in range(len(N_vals))])
 Eta = np.gradient(epsilon,N_vals) / epsilon
-end_inf = np.argmin(np.abs(1 - epsilon))
+
+# ===============================================================
+
+cands = np.where(np.abs(epsilon-1) < 1e-2)[0]
+end_inf = cands[np.argmin(np.abs(N_vals[cands]- NEnd))]
 N_end = N_vals[end_inf]
 N_pivot = N_end - 50 
 pivot_idx = np.argmin(np.abs(N_pivot - N_vals))
 a0 = (k0 / Hubble_vals[pivot_idx]) * np.exp(-N_vals[pivot_idx])    # normalize a(N) so that k∗ = 0.05 crosses the Hubble radius N∗ = 50 e-folds before the end of inflation.
 a_vals = a0 * np.exp(N_vals)
 K = a_vals * Hubble_vals  # Comoving Hubble scale
+
+# ===============================================================
+
 def sigma_dot(Ne):
     idx = np.argmin(np.abs(Ne - N_vals))
     phi = phi_vals[idx]
@@ -170,6 +213,10 @@ def sigma_dot(Ne):
     val = power(Hub,2) * (dphi ** 2 + G[1][1] * dchi ** 2 + G[2][2] * dpsi ** 2)
     return np.sqrt(val)
 sigma_vals = [sigma_dot(ne) for ne in N_vals]
+
+
+# ===============================================================
+
 deltaN = 3    # this value is numerically stable in 3-field system
 
 def N_subhorizon(k):
@@ -180,7 +227,11 @@ def N_subhorizon(k):
         return np.nan
     else:
         return N_vals[N_init_idx]
-    def BD_Inc1(k):
+
+# ===============================================================
+# Bunch-Davies Inc:
+
+def BD_Inc1(k):
     N_init = N_subhorizon(k)
     idx = np.argmin(np.abs(N_vals - N_init))
     a , Hub = a_vals[idx] , Hubble_vals[idx]
@@ -231,6 +282,7 @@ def BD_Inc3(k):
     Phi_p = - Phi + (phi_p * inc1 + G[1][1] * chi_p * inc2 + G[2][2] * psi_p * inc3) / (2 * power(Mp,2))
     return [inc1 , inc2 , inc3 , dinc1 , dinc2 , dinc3 , Phi , Phi_p]
 
+# ===============================================================
 # Mukhanov-Sasaki equations:
 
 def Mukhanov_Sasaki(N,state,k):
@@ -245,6 +297,10 @@ def Mukhanov_Sasaki(N,state,k):
     d2X3dN2 = 4 * dPhi * dpsi - 2 * Phi * V_psi(phi,chi,psi) / (power(Hub,2) * G[2][2]) - (3 + 2 * y_phi(phi) * dphi + 2 * p_chi(chi) * dchi - eps) * dX3_dN - (power(k / aH,2) + V_psipsi(phi,chi,psi) / (power(Hub,2) * G[2][2])) * X3 - (2 * y_phiphi(phi) * dphi * dpsi - 2 * y_phi(phi) * V_psi(phi,chi,psi) / (power(Hub,2) * G[2][2]) + V_phipsi(phi,chi,psi) / (power(Hub,2) * G[2][2])) * X1 - (2 * p_chichi(chi) * dchi * dpsi - 2 * p_chi(chi) * V_psi(phi,chi,psi) / (power(Hub,2) * G[2][2]) + V_chipsi(phi,chi,psi) / (power(Hub,2) * G[2][2])) * X2 - 2 * y_phi(phi) * dpsi * dX1_dN - 2 * p_chi(chi) * dpsi * dX2_dN
     d2PhidN2 = -(7 - eps) * dPhi - (2 * V(phi,chi,psi) / power(Mp * Hub,2) + power(k / aH,2)) * Phi - (V_phi(phi,chi,psi) * X1 + V_chi(phi,chi,psi) * X2 + V_psi(phi,chi,psi) * X3) / power(Hub * Mp,2)
     return np.array([dX1_dN , dX2_dN , dX3_dN , d2X1dN2 , d2X2dN2 , d2X3dN2 , dPhi , d2PhidN2])
+
+# ===============================================================
+# Runge-Kutta solver (of course it can be imported from scipy too rather than coding it manually!)
+
 def Runge_Kutta(k, init):
     A = init
     N_init = N_subhorizon(k)
@@ -259,6 +315,9 @@ def Runge_Kutta(k, init):
         k4 = Mukhanov_Sasaki(Ne + dN, A + k3 * dN, k)
         A += (dN / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
     return NEP , solutions[:, 0] , solutions[:,1] , solutions[:,2] , solutions[:,6]
+
+
+# ===============================================================
 # power spectrum calculator
 
 def CPS(k):
@@ -276,15 +335,28 @@ def CPS(k):
     R3 = Phi_B3[sol_idx] + power(Hub / sigma,2) * (dphi * Delta_phi3[sol_idx] + G[1][1] * dchi * Delta_chi3[sol_idx] + G[2][2] * dpsi * Delta_psi3[sol_idx])
     Sol = np.abs(R1) ** 2 + np.abs(R2) ** 2 + np.abs(R3) ** 2 
     return (k ** 3 / (2 * power(np.pi,2))) * Sol
-c_idx = np.argmin(np.abs(0.05 * mpc - K))
+
+
+# ==============================================================
+c_idx = np.argmin(np.abs(0.05 * mpc - K)) # cmb mode
+print('power spectrum at CMB scale:',CPS(K[c_idx]))
+
+# ===============================================================
+
 n_elements = len(K) 
-indices = np.linspace(np.argmin(np.abs(5 - N_vals)), n_elements - 1, 300, dtype = int)
+indices = np.linspace(np.argmin(np.abs((N_vals[c_idx] - 3) - N_vals)), n_elements - 1, 300, dtype = int)
 k_sample = [K[i] for i in indices]
 N_sample = [N_vals[i] for i in indices]
 
 POW = np.array([CPS(k) for k in k_sample])
+
+# ===============================================================
+
 highlight_N = N_vals[c_idx]
 highlight_POW = CPS(K[c_idx])
+
+# ===============================================================
+
 plt.figure(figsize=(8, 5))
 plt.title("Curvature Power Spectrum in triple inflation", fontsize = 14.75)
 plt.loglog(np.array(k_sample) / mpc,POW, color ='b')

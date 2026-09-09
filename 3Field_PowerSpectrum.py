@@ -36,7 +36,7 @@ def V(phi,chi,psi):
     return V0 * power(phi,2) / (power(phi0,2) + power(phi,2)) + 0.5 * power(mchi,2) * power(chi,2) + 0.5 * power(mpsi,2) * power(psi,2)
 
 # derivates of the potential: 
-# Note: for any arbitrary potential these functions compute its derivatives numerically
+# Note: for any arbitrary potential these functions compute its derivatives numerically, so you don't need to write their analytical form.
 
 def V_phi(phi,chi,psi):
    h = 1e-5
@@ -161,9 +161,9 @@ def background(N,y):
 phi_i = 7
 chi_i = 7.31
 psi_i = 7.31
-phi_dot_i = 0#- V_phi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
-chi_dot_i = 0#- V_chi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
-psi_dot_i = 0#- V_psi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
+phi_dot_i = 0 #- V_phi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
+chi_dot_i = 0 #- V_chi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
+psi_dot_i = 0 #- V_psi(phi_i,chi_i,psi_i) / V(phi_i,chi_i,psi_i)
 Inc = np.array([phi_i, phi_dot_i, chi_i, chi_dot_i, psi_i, psi_dot_i])
  
 
@@ -185,7 +185,7 @@ dpsidN = sol_background.y[5]
 
 Hubble_vals = [H(phi_vals[i],chi_vals[i],psi_vals[i],dphidN[i],dchidN[i],dpsidN[i]) for i in range(len(N_vals))]
 epsilon = np.array([-(1 / H(phi_vals[i],chi_vals[i],psi_vals[i],dphidN[i],dchidN[i],dpsidN[i])) * dH_dN(phi_vals[i],chi_vals[i],psi_vals[i],dphidN[i],dchidN[i],dpsidN[i]) for i in range(len(N_vals))])
-Eta = np.gradient(epsilon,N_vals) / epsilon
+#Eta = np.gradient(epsilon,N_vals) / epsilon
 
 # ===============================================================
 
@@ -217,7 +217,7 @@ sigma_vals = [sigma_dot(ne) for ne in N_vals]
 
 # ===============================================================
 
-deltaN = 3    # this value is numerically stable in 3-field system
+deltaN = 3    # this value is numerically stable in 3-field system.
 
 def N_subhorizon(k):
     exit_idx = np.argmin(np.abs(k - K))
@@ -299,12 +299,12 @@ def Mukhanov_Sasaki(N,state,k):
     return np.array([dX1_dN , dX2_dN , dX3_dN , d2X1dN2 , d2X2dN2 , d2X3dN2 , dPhi , d2PhidN2])
 
 # ===============================================================
-# Runge-Kutta solver (of course it can be imported from scipy too rather than coding it manually!)
+# Runge-Kutta solver (of course it can also be imported from scipy rather than coding it manually!)
 
 def Runge_Kutta(k, init):
     A = init
     N_init = N_subhorizon(k)
-    NEP = [x for x in N_vals if x >= N_init]
+    NEP = [x for x in N_vals if N_init <= x <= N_vals[end_inf]]
     solutions = np.zeros((len(NEP), len(A)), dtype = complex)
     dN = NEP[1] - NEP[0]
     for i, Ne in enumerate(NEP):
@@ -318,7 +318,7 @@ def Runge_Kutta(k, init):
 
 
 # ===============================================================
-# power spectrum calculator
+# Curvature Power Spectrum (CPS) calculator 
 
 def CPS(k):
     T1 , Delta_phi1 , Delta_chi1 , Delta_psi1, Phi_B1 = Runge_Kutta(k,BD_Inc1(k))
@@ -343,11 +343,7 @@ print('power spectrum at CMB scale:',CPS(K[c_idx]))
 
 # ===============================================================
 
-n_elements = len(K) 
-indices = np.linspace(np.argmin(np.abs((N_vals[c_idx] - 3) - N_vals)), n_elements - 1, 300, dtype = int)
-k_sample = [K[i] for i in indices]
-N_sample = [N_vals[i] for i in indices]
-
+k_sample = np.geomspace(0.005 * mpc, K[end_inf], 300)
 POW = np.array([CPS(k) for k in k_sample])
 
 # ===============================================================
@@ -361,16 +357,9 @@ plt.figure(figsize=(8, 5))
 plt.title("Curvature Power Spectrum in triple inflation", fontsize = 14.75)
 plt.loglog(np.array(k_sample) / mpc,POW, color ='b')
 plt.scatter(K[c_idx] / mpc, highlight_POW, color='brown', s=50, zorder=5)
-plt.annotate('CMB scale',
-             xy=(K[c_idx]/mpc, highlight_POW),
-             xytext=(0.001, highlight_POW * 2.5),color='brown',fontsize=11.5)
+plt.annotate('CMB scale', xy=(K[c_idx]/mpc, highlight_POW), xytext=(0.001, highlight_POW * 2.5),color='brown',fontsize=11.5)
 plt.xlabel(r'$k\;\;[\mathrm{Mpc}]^{-1}$',fontweight='bold', fontsize=14)
 plt.ylabel(r'$\mathcal{P}_\mathcal{R}(k)$',fontweight='bold', fontsize=14)
 #plt.savefig('3fiels_power_inK.pdf',format = 'pdf' ,  bbox_inches="tight", dpi = 600)
 plt.show()
-
-
-
-
-
 
